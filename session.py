@@ -7,6 +7,9 @@ from sqlalchemy import Column, String, Text, DateTime, select
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
+# session.py
+from db_base import Base  # ✅ Shared Base
+# ... rest of your code remains the same ...
 
 DATABASE_URL = "postgresql+asyncpg://postgres:admin@localhost:5432/mcdonald_agent"
 Base = declarative_base()

@@ -8,6 +8,7 @@ from agents import Agent, Runner, set_tracing_disabled, function_tool
 from openai import AsyncOpenAI
 from agents import OpenAIChatCompletionsModel
 from session import PostgreSQLSession, init_db  # ✅ Your SQLAlchemy session class
+from models import AgentSession  # 👈 Import the model to register it
 
 # ========== Environment ==========
 load_dotenv()
