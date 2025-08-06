@@ -2,22 +2,21 @@
 
 import asyncio
 import uuid
-import os  # ✅ NEW
+import os
 from datetime import datetime
 from sqlalchemy import Column, String, Text, DateTime, select
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
-from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
 
-from db_base import Base  # ✅ Shared Base
+from db_base import Base  # ✅ Use shared Base
+from dotenv import load_dotenv
 
-from dotenv import load_dotenv  # ✅ NEW
-load_dotenv()  # ✅ Load env vars
+load_dotenv()
 
-# ✅ Replaced hardcoded DB URL with env-based
 DATABASE_URL = os.getenv("DATABASE_URL")
 
-Base = declarative_base()
+# ❌ Don't redefine Base here if you're importing it
+# Base = declarative_base()  # REMOVE this if db_base already has Base
 
 class McSession(Base):
     __tablename__ = "mcdonald_agent_session"
@@ -26,7 +25,6 @@ class McSession(Base):
     order_detail = Column(Text)
     timestamp = Column(DateTime, default=datetime.utcnow)
 
-# Engine and session setup
 engine = create_async_engine(DATABASE_URL, echo=False)
 AsyncSessionLocal = sessionmaker(bind=engine, class_=AsyncSession, expire_on_commit=False)
 
@@ -49,6 +47,22 @@ class PostgreSQLSession:
     async def load(self):
         async with AsyncSessionLocal() as session:
             return await session.get(McSession, self.session_id)
+
+    async def update_chat(self, chat: str):
+        async with AsyncSessionLocal() as session:
+            async with session.begin():
+                obj = await session.get(McSession, self.session_id)
+                if obj:
+                    obj.chat_conversation = chat
+                    obj.timestamp = datetime.utcnow()
+
+    async def update_order(self, order: str):
+        async with AsyncSessionLocal() as session:
+            async with session.begin():
+                obj = await session.get(McSession, self.session_id)
+                if obj:
+                    obj.order_detail = order
+                    obj.timestamp = datetime.utcnow()
 
 async def init_db():
     async with engine.begin() as conn:

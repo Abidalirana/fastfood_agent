@@ -247,9 +247,26 @@ async def root():
 async def get_menu_api():
     return get_menu()
 
+
+
+from fastapi import HTTPException  # ✅ Make sure this is at the top
+import re
+
 @app.get("/status/{order_id}")
 async def get_status_api(order_id: str):
-    return {"status": get_status(order_id)}
+    # ❌ Reject invalid format (e.g., "one fries")
+    if not re.match(r"^[a-zA-Z0-9_\-]+$", order_id):
+        raise HTTPException(status_code=400, detail="Invalid order ID format.")
+
+    try:
+        status = await get_order_status_from_db(order_id)
+        if not status:
+            raise HTTPException(status_code=404, detail="Order not found.")
+        return {"order_id": order_id, "status": status}
+    except Exception as e:
+        print(f"🔥 Error getting status for {order_id}: {e}")
+        raise HTTPException(status_code=500, detail="Internal server error.")
+
 
 class UserMessage(BaseModel):
     message: str
