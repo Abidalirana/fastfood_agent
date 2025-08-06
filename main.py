@@ -291,7 +291,58 @@ async def chat_with_agent(user_msg: UserMessage):
     return {"reply": bot_reply}
 
 # ========== Entry Point ==========
+#for html ui
+from fastapi.responses import HTMLResponse
 
+@app.get("/agent", response_class=HTMLResponse)
+async def agent_ui():
+    return """
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <title>🍔 FastFood Agent</title>
+        <style>
+            body { font-family: sans-serif; padding: 20px; max-width: 600px; margin: auto; }
+            input, button { padding: 10px; font-size: 16px; width: 80%; }
+            button { width: 18%; }
+            #chat { margin-top: 20px; white-space: pre-wrap; border: 1px solid #ccc; padding: 10px; height: 300px; overflow-y: scroll; }
+        </style>
+    </head>
+    <body>
+        <h2>🍟 Talk to FastFoodBot</h2>
+        <div id="chat">🤖 Bot: Asalam-o-Alaikum! Khairiyat? Ready to order?</div>
+        <input id="msg" placeholder="Type your message..." />
+        <button onclick="send()">Send</button>
+
+        <script>
+            async function send() {
+                const input = document.getElementById('msg');
+                const chat = document.getElementById('chat');
+                const message = input.value;
+                if (!message) return;
+
+                chat.innerHTML += "\\n👤: " + message;
+                input.value = "";
+
+                const res = await fetch("/order", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ message })
+                });
+
+                const data = await res.json();
+                chat.innerHTML += "\\n🤖: " + data.reply;
+                chat.scrollTop = chat.scrollHeight;
+            }
+        </script>
+    </body>
+    </html>
+    """
+
+
+
+
+#==============================================================================================================
 if __name__ == "__main__":
     import sys
     if "api" in sys.argv:
