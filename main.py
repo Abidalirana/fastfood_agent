@@ -181,3 +181,103 @@ async def main():
 
 if __name__ == "__main__":
     asyncio.run(main())
+#==========================================
+# 👆 all your existing imports and code are unchanged ...
+
+# ========== Main Loop ========== (unchanged)
+async def main():
+    print("🍔 FastFoodBot ready! Type 'quit' to exit.\n")
+
+    await init_db()
+
+    session = PostgreSQLSession()
+    previous = await session.load()
+    chat_history = previous.chat_conversation if previous else ""
+    order_detail = previous.order_detail if previous else ""
+
+    if previous:
+        print("📜 Previous session restored.")
+        print(f"🗨️  Chat: {chat_history}")
+        print(f"🧾 Order: {order_detail}")
+
+    while True:
+        user_input = input("🍔 You: ").strip()
+        if user_input.lower() in {"quit", "exit"}:
+            print("👋 Goodbye!")
+            break
+
+        chat_history += f"\n👤: {user_input}"
+
+        result = await Runner.run(fastfood_agent, chat_history)
+        bot_reply = result.final_output
+        print(f"🤖 Bot: {bot_reply}")
+
+        chat_history += f"\n🤖: {bot_reply}"
+
+        if "order confirmed" in bot_reply.lower():
+            order_detail = bot_reply
+
+        await session.save(chat_history.strip(), order_detail.strip())
+
+# ========== FastAPI Setup =========================================================================================================================================================
+
+from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
+import uvicorn
+
+app = FastAPI(title="🍔 FastFood Agent API")
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+@app.on_event("startup")
+async def startup_event():
+    await init_db()
+
+@app.get("/")
+async def root():
+    return {"message": "Welcome to FastFoodBot API"}
+
+@app.get("/menu")
+async def get_menu_api():
+    return get_menu()
+
+@app.get("/status/{order_id}")
+async def get_status_api(order_id: str):
+    return {"status": get_status(order_id)}
+
+class UserMessage(BaseModel):
+    message: str
+
+@app.post("/order")
+async def chat_with_agent(user_msg: UserMessage):
+    session = PostgreSQLSession()
+    previous = await session.load()
+    chat_history = previous.chat_conversation if previous else ""
+    order_detail = previous.order_detail if previous else ""
+
+    chat_history += f"\n👤: {user_msg.message}"
+
+    result = await Runner.run(fastfood_agent, chat_history)
+    bot_reply = result.final_output
+    chat_history += f"\n🤖: {bot_reply}"
+
+    if "order confirmed" in bot_reply.lower():
+        order_detail = bot_reply
+
+    await session.save(chat_history.strip(), order_detail.strip())
+    return {"reply": bot_reply}
+
+# ========== Entry Point ==========
+
+if __name__ == "__main__":
+    import sys
+    if "api" in sys.argv:
+        uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=True)
+    else:
+        asyncio.run(main())

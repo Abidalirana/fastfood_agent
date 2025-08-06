@@ -2,16 +2,21 @@
 
 import asyncio
 import uuid
+import os  # ✅ NEW
 from datetime import datetime
 from sqlalchemy import Column, String, Text, DateTime, select
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
-# session.py
-from db_base import Base  # ✅ Shared Base
-# ... rest of your code remains the same ...
 
-DATABASE_URL = "postgresql+asyncpg://postgres:admin@localhost:5432/mcdonald_agent"
+from db_base import Base  # ✅ Shared Base
+
+from dotenv import load_dotenv  # ✅ NEW
+load_dotenv()  # ✅ Load env vars
+
+# ✅ Replaced hardcoded DB URL with env-based
+DATABASE_URL = os.getenv("DATABASE_URL")
+
 Base = declarative_base()
 
 class McSession(Base):
@@ -21,6 +26,7 @@ class McSession(Base):
     order_detail = Column(Text)
     timestamp = Column(DateTime, default=datetime.utcnow)
 
+# Engine and session setup
 engine = create_async_engine(DATABASE_URL, echo=False)
 AsyncSessionLocal = sessionmaker(bind=engine, class_=AsyncSession, expire_on_commit=False)
 
@@ -61,7 +67,3 @@ async def preview_live_sessions():
             print(f"💬 {data.chat_conversation}")
             print(f"📝 {data.order_detail}")
             print(f"⏰ {data.timestamp}")
-
-# Optional testing:
-# asyncio.run(init_db())
-# asyncio.run(preview_live_sessions())
